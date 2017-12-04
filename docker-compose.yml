@@ -1,0 +1,51 @@
+version: '2'
+services:
+  nexus:
+    image: sonatype/nexus:oss
+    environment:
+      MAX_HEAP: 768m
+    volumes_from:
+    - nexus-data
+    ports:
+    - 8081:8081/tcp
+    labels:
+      io.rancher.sidekicks: nexus-data
+      io.rancher.container.hostname_override: container_name
+  nexus-data:
+    image: busybox
+    entrypoint:
+    - chown
+    - -R
+    - '200'
+    - /sonatype-work
+    volumes:
+    - /var/lib/docker/nexus-data:/sonatype-work
+    labels:
+      io.rancher.container.pull_image: always
+      io.rancher.container.start_once: 'true'
+  jenkins-plugins:
+    image: rancher/jenkins-plugins:v0.1.1
+  jenkins-primary:
+    image: charlesheidemann/jenkins-docker:2.74
+    entrypoint:
+    - /usr/share/jenkins/rancher/jenkins.sh
+    volumes_from:
+    - jenkins-plugins
+    - jenkins-datavolume
+    ports:
+    - 8000:8080/tcp
+    - 50000:50000/tcp
+    labels:
+      io.rancher.sidekicks: jenkins-plugins,jenkins-datavolume
+      io.rancher.container.hostname_override: container_name
+  jenkins-datavolume:
+    image: busybox
+    entrypoint:
+    - chown
+    - -R
+    - 1000:1000
+    - /var/jenkins_home
+    volumes:
+    - /var/lib/docker/jenkins-ci:/var/jenkins_home
+    labels:
+      io.rancher.container.start_once: 'true'
